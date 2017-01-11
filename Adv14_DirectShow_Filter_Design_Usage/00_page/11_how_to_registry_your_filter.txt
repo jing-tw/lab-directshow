@@ -1,0 +1,4 @@
+regsvr32.exe /s your_filter.ax
+
+<ex>
+	regsvr32.exe /s xvid.ax

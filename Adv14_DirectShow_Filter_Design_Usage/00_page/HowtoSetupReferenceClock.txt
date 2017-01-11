@@ -1,0 +1,10 @@
+﻿// DirectX 簡單教學 -- 井民全
+// 如何設定 reference clock
+
+// 設定 Graph Clock
+	CComPtr<IMediaFilter> pMediaFilter = 0;
+	pFG->QueryInterface(IID_IMediaFilter, (void**)&pMediaFilter);
+	hr=pMediaFilter->SetSyncSource(NULL);
+	if(hr!=S_OK){
+		MessageBox(NULL,_T("SetSyncSource failure"),_T("Error in init_Graph_VMR"),MB_OK);
+	}

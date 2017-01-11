@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>DirectShow Filter Design</title>
+<style type="text/css">
+<!--
+body,td,th {
+	color: #FFFFFF;
+}
+body {
+	background-color: #000000;
+}
+a:link {
+	color: #08FA41;
+}
+a:visited {
+	color: #08FA41;
+}
+subitem{
+	color:#94F7F8;
+}
+subtitle{
+	/*background-color: #FFFFFF; color:#000000;*/
+}
+-->
+</style></head>
+
+<body>
+<div align="center">
+  <h1>DirectShow Filter Design</h1>
+</div>
+<p>&nbsp;</p>
+<table width="100%" border="1" align="center" cellspacing="0">
+  <tr>
+    <td width="246"><div align="center"><strong>基本 DirectShow Filter 觀念</strong></div></td>
+    <td width="233">&nbsp;</td>
+  </tr>
+  <tr>
+    <td>
+	<p> <subtitle>Filters Quality Control</subtitle> </p>
+		<ul> 
+			<li> <subitem>IFilter Test Procedure</subitem>: ifilttst.exe </li>
+		</ul>
+	<p> <subtitle>Filters Usage</subtitle> </p>
+	  <ul>
+		<li><subitem>最簡單播放檔案範例</subitem> (自動連接: 幾乎所有的影像格式) (<a href="../01_demos/11_simple_filter_usage/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/11_simple_filter_usage.zip">prj.zip</a>)</li>
+		<li><subitem>如何指定視窗播放檔案: 手動連接:</subitem>(<a href="../01_demos/11_simple_filter_usage_manual_connection/src/demo.cpp">demo.cpp</a>,<a href="../01_demos/11_simple_filter_usage_manual_connection/src/CMakeLists.txt">CMakeLists.txt</a>), <a href="../01_demos/11_simple_filter_usage_manual_connection.zip">prj.zip</a><br/>支援格式  mpeg, xvid, rmvb. <br/>暫時不能處理: wmv.</li>
+		<li><subitem>如何 Full Screen 播放 (自動連接, 3d 格式 wmv)</subitem>  (<a href="../01_demos/12_simple_filter_fullscreen_render_3d_wmv_Knights_Quest_576pwmv/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/12_simple_filter_fullscreen_render_3d_wmv_Knights_Quest_576pwmv.zip">prj.zip</a>)</li>
+		<li><subitem>How to save a Filter to a .GRF File</subitem>  (<a href="./faq/001_Saving_a_Filter_to_a_GRF_File.txt">view</a>)</li>
+		<li><subitem>如何印出已經連線的指定 Filter 接腳 mediatype</subitem>(<a href="../01_demos/16_show_mediatype_sourcefilter/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/16_show_mediatype_sourcefilter.zip">prj.zip</a>)<br/>這裡直接使用 RenderFile 接 Filter, 主要原因是 RenderFile 會幫我們剖析 file, 取出對應的資料, 填寫 media type, 然後自動連線.<br/>  </li>
+		<li><subitem>如何顯示 Property 視窗</subitem>(<a href="../01_demos/17_setup_property_demo/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/17_setup_property_demo.zip">prj.zip</a>)<br/>這裡直接使用 RenderFile 接 Filter, 主要原因是 RenderFile 會幫我們剖析 file, 取出對應的資料, 填寫 media type, 然後自動連線.<br/>  </li>
+	
+		<li></li>
+		<li><subitem>Step 1:</subitem> 3dtv redner Full Screen 播放 (3d 格式 wmv)  (<a href="../01_demos/12_3dtv_render_filter_fullscreen_3d_wmv_play/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/12_3dtv_render_filter_fullscreen_3d_wmv_play.zip">prj.zip</a>)</li>
+		<li><subitem>Step 2:</subitem> 3dtv redner +3dv transform filter Full Screen 播放 (3d 格式 wmv) (<a href="../01_demos/12_3dtv_render_filter_fullscreen_3d_wmv_play_with_3dtvtransform_filter/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/12_3dtv_render_filter_fullscreen_3d_wmv_play_with_3dtvtransform_filter.zip">prj.zip</a>)</li>
+		<li><subitem>Step 3:</subitem> (red_blue anaglyph ok, windowed) 顯示 3dtv transform filter 的 property + 3dtv redner +3dv transform filter (<a href="../01_demos/12_3dtv_render_filter_fullscreen_setup_property_demo/src/demo.cpp">demo.cpp</a>, <a href="../01_demos/12_3dtv_render_filter_fullscreen_setup_property_demo.zip">prj.zip</a>)</li>
+	
+	  </ul>
+	<p> Render Filter </p>
+	  <ul>
+	    <li><subitem>如何使用 NullRenderer</subitem>  (<a href="./faq/002_NULLRender_Usage.txt">view</a>)</li>
+        <li><subitem>如何使用 VMR-9</subitem>   (<a href="../../../ProgramTips/ProgramTech_AssignDisplayWindow.txt">view</a>)</li>
+		<li><subitem>如何使用 Enhanced Video Render</subitem> (<a href="EnhancedVideoRender.txt">view</a>)</li>
+		<li><subitem>指定影像顯示視窗</subitem> (<a href="../../../ProgramTips/ProgramTech_AssignDisplayWindow.txt">view</a>)</li>
+	  </ul>
+	  
+	<p>Filter 相關</p>
+      <ul>
+        <li>清掉所有的 Filters (<a href="../../../ProgramTips/ProgramTech_RemoveAllFilters.txt">view</a>)  </li>		
+		<li>取得任何 Pin 第一個 MediaType 的範例 (<a href="ListMediaType.txt">view</a>) </li>		
+		<li>如何設定 reference clock (<a href="HowtoSetupReferenceClock.txt">HowtoSetupReferenceClock.txt</a>)  </li>		
+		<li>如何讓 Pin 得到使用者設定的 reference clock 範例 (<a href="GetReferenceClock.txt">GetReferenceClock.txt</a>)  </li>
+	    <li>如何自訂 sample dulation 播放速率 (<a href="CustomizeDulationDeliver.txt">CustomizeDulationDeliver.txt</a>)  </li>	
+	  </ul>
+	  
+	  
+	  <p> FAQ </p>
+	  <ul>
+		<li>自動註冊 XviD (<a href="RegistryXviDOnly.txt">view</a>) </li>
+        <li>強迫指定 XviD 進行解碼 (<a href="XviDOnly.txt">view</a>) </li>
+		<li>如何得知使用者端安裝的 DirectX 版本 (<a href="GetDXVersion.txt">view</a>) </li>
+		<li>得知目前 Filter 是否正在執行 (<a href="../../../ProgramTips/ProgramTech_isRunning.txt">view</a>)</li>
+		<li>為何無法建立 ffdshow filter? (<a href="CannotCreateffdshowFilter.html">CannotCreateffdshowFilter</a>)  </li>
+	  </ul>
+	  </td>
+    <td> <p>影像處理</p>
+	<ul>
+		<li>VMR-9 存檔 BMP 範例 (<a href="../../../ProgramTips/ProgramTech_VMR_Capture_BMP_File.txt">view</a>) </li>
+        <li>任意放大縮小正在播放的視訊 (<a href="Any_Size.txt">view</a>) </li>
+	</ul>
+	</td>
+  </tr>
+  <tr>
+      <td> <p>聲音</p>
+	  <ul>
+		<li>自動選擇麥克風音源_設定聲音 (<a href="Audio.cpp">Audio.cpp</a> <a href="Audio.h">Audio.h</a>) </li>
+		<li>播放聲音(設定播放速率範例) (<a href="PlayFiletest.zip">PlayFiletest.zip</a>  </li>
+	  </ul>
+	  </td>
+	  <td><p>其他</p>
+	<ul>
+		<li>取得硬體廠商資訊 (<a href="QueryVendorInfo.txt">view</a>) </li>
+		<li>取得視訊卡顯示記憶體大小 (<a href="GetVideoMemoryNum.txt">view</a>) </li>
+		<li>如何為你的 Dialog 加上 Icon (<a href="DialogIconSetting.txt">view</a>) </li>
+	</ul></td>
+  </tr>
+  
+  <tr>
+  <td><p>&nbsp;</p>
+      <ul>
+        <li>基本資料流觀念 (<a href="01_Overview_of_Data_Flow_in_DirectShow.pptx">ppt</a>)      </li>
+      </ul>
+      <ol>
+        <ul>
+          <li>瞭解什麼是 Sample, Sample 的觀念, 以及 Sample 如何在 Filter 之間被傳遞</li>
+          <li>整個 Filter 的解碼流程</li>
+          <li>Push model 與 Pull model 使用的 interface 與機制</li>
+          <li>Sample 與 Allocator 之間的關係</li>
+          <li>資料如何被送到 下一級的 Filter</li>
+          <li></li>
+        </ul>
+      </ol></td>
+  <td></td>
+  </tr>
+  <tr>
+    
+    <td><ul>
+      <li>以設計者的角度, 看資料流 (<a href="02_Data Flow for Filter Developers.pptx">ppt</a>)      </li>
+        </ul>
+      <ol>
+        <ul>
+          <li>Push model 將 Sample 傳給下一級的整個流程</li>
+          <li>Pull model 向上一級要資料的流程</li>
+          <li>如何在 pause 時, 還收集資料 (傳回 VFW_S_CANT_CUE)</li>
+          <li>當錯誤發生時的處理建議</li>
+          <li>當資料傳送完畢時, 應該下的指令通知整個 Filter</li>
+          <li>如何標明我是 Source Filter (作 <a href="ms-help://MS.PSDKSVR2003R2.1033/directshow/htm/iamfiltermiscflagsinterface.htm">IAMFilterMiscFlags</a> ) 
+            <ul>
+              <li>什麼是 IPin::NewSegmentation</li>
+            </ul>
+          </li>
+          <li>何時要 Flush 整個 Filter ?
+            <ul>
+              <li>當輸入 Pin 收到 Flush 指令時, 我們該怎麼處理? </li>
+            </ul>
+          </li>
+          <ul>
+            <li>當收到 EndFlush 時, 怎麼作?</li>
+          </ul>
+          <li>如何實作 Seek 功能 ?
+            <ul>
+              <li>如何讓別人知道, 我有 Seek 功能? [<a href="../../../ProgramTips/ProgramTech_GetSeekCapcities.txt">code</a>] </li>
+            </ul>
+          </li>
+        </ul>
+        <p><img src="../../ProgramTips/ProgramTech_GetSeekCapcities.jpg" alt="ProgramTech_GetSeekCapcities" width="195" height="103" /></p>
+      </ol></td>
+	  <td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td><ul><li>Filter 的時間觀念 (重要) (<a href="03_The_Conecption_of_Time_in_DirectShow.pptx">ppt</a>) </li></ul></td>
+	<td>&nbsp;</td>
+  </tr>
+  <tr>
+    
+    <td><ul><li>Filter 如何相連 (<a href="04_How_Filter_Connect.pptx">ppt</a>) </li></ul></td>
+	<td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td><ul><li>簡單的 PushSource  使用範例 (<a href="05_PushSourceDemo.pptx">ppt</a>) </li></ul></td>
+	 <td>&nbsp;</td>
+  </tr>
+  <tr>
+    
+    <td><ul>
+      <li>DirectShow 的事件處理 (<a href="06_Event_Notification_in_DirectShow.pptx">ppt</a>) 
+        : 例如: 我們要如何知道 Filter 目前的處理進度 ?
+        <ul>
+          <li>Filter 如何送出 Event</li>
+          <li>應用程式如何取得 Event</li>
+        </ul>
+      </li>
+      </ul>
+    <p>&nbsp;</p></td>
+	<td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<h2 align="center"><strong>Direct3D</strong> Tutorial </h2>
+<table width="954" border="1">
+  <tr>
+    <td width="310"><div align="center">重新編譯 DXUT.lib </div></td>
+    <td width="628"><blockquote>
+      <p>Step 1: 開啟專案 DXUT_2005.sln</p>
+      <blockquote>
+        <p>H:\Program Files\Microsoft DirectX SDK (February 2007)\Samples\C++\Common</p>
+        </blockquote>
+      <p>Step 2: 設定 Include Path</p>
+      <blockquote>
+        <p>H:\Program Files\Microsoft DirectX SDK (February 2007)\Include</p>
+        <p>完成 </p>
+      </blockquote>
+    </blockquote></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+</body>
+</html>

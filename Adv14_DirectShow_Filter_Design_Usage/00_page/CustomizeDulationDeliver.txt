@@ -1,0 +1,38 @@
+﻿// DirectX 簡單教學 -- 井民全
+// 如何自訂 sample 的播放速率
+	
+HRESULT CMyPushPin2::MyDeliver(IMediaSample *pSample){	
+		// 取得 sample 的 duration time
+		REFERENCE_TIME TimeStart;
+		REFERENCE_TIME TimeEnd;
+		pSample->GetTime(&TimeStart,&TimeEnd);
+
+		// 取得目前 CPU frequency
+		LARGE_INTEGER m_liPerfFreq={0};
+		QueryPerformanceFrequency(&m_liPerfFreq); 
+
+		// 取得解碼前時間
+		LARGE_INTEGER m_liPerfStart={0};
+		QueryPerformanceCounter(&m_liPerfStart);
+
+		// 送出去
+		hr = Deliver(pSample);
+
+		// 取得解碼後的時間
+		LARGE_INTEGER liPerfNow={0};
+		QueryPerformanceCounter(&liPerfNow);
+
+		// 計算出解碼所需要的時間 (millisecond)
+		long decodeDulation=( ((liPerfNow.QuadPart - m_liPerfStart.QuadPart) * 1000)/m_liPerfFreq.QuadPart);
+
+
+		// 自訂 Delay
+		double t=10000000/(LONGLONG)(TimeEnd-TimeStart); // (millisecond)
+
+		long TotalDurlation=(long)t-decodeDulation;
+		if(TotalDurlation <0)
+			TotalDurlation=0;
+
+		TRACE("MyPushSource TotalDuration =%d\n",TotalDurlation);
+		Sleep(TotalDurlation);
+}

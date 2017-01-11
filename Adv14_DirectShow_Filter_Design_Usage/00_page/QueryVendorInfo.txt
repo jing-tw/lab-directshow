@@ -1,0 +1,7 @@
+﻿// 這個程式簡單的介紹如何取得 Filter 的廠商資訊
+// MSDN: ms-help://MS.PSDKSVR2003R2.1033/directshow/htm/ibasefilterqueryvendorinfo.htm
+//                                                                                井民全
+	LPWSTR VendorInfo;
+	hr=m_pVR->QueryVendorInfo(&VendorInfo);
+	if(hr==S_OK)
+		CoTaskMemFree(VendorInfo);

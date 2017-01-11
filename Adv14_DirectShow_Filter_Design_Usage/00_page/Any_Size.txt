@@ -1,0 +1,81 @@
+﻿// 這個範例用來展示
+//                 如何任意放大縮小正在播放的視訊
+// by Jing (井民全)
+
+// 建立 Graph
+HRESULT CRenderObject::CreateFilter_VMR(CComPtr<IBaseFilter> pSource,IFilterGraph **ppFG,HWND hWnd){
+	// Step 1: Initialize COM
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
+	//  Step 2: Create filter graph 
+	HRESULT hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC,IID_IFilterGraph, (void**) ppFG);
+	if(FAILED(hr))
+		return hr;
+
+	// Step 3: Get a GraphBuilder interface from the filter graph 
+	IGraphBuilder *pBuilder;
+	hr = (*ppFG)->QueryInterface(IID_IGraphBuilder, (void **)&pBuilder);
+	if(FAILED(hr))
+		return hr;
+	
+	hr=pBuilder->AddFilter(pSource,_T("MyPushSourceFilter2"));
+	if(FAILED(hr)) 
+		return hr;
+
+	// Step 4: 取得 VMR-9 video Render
+	hr=AddFilterByCLSID(pBuilder,CLSID_VideoMixingRenderer9,_T("Video Render"),&m_pVR);// 加入 VMR9 介面
+	if(FAILED(hr))
+		return hr;
+
+	hr = m_pVR->QueryInterface(IID_IVMRFilterConfig9, (LPVOID *)&pConfig);
+	if(FAILED(hr))
+		return hr;
+
+	hr=pConfig->SetRenderingMode(VMR9Mode_Windowless);
+	if(FAILED(hr))
+		return hr;
+
+	hr = m_pVR->QueryInterface(IID_IVMRWindowlessControl9, (LPVOID *)&pWC);
+	if(FAILED(hr)) 
+		DXShowError(hr);
+		
+    // ========================== 關鍵片段 ==========================
+	if(hWnd !=0){
+		hr=pWC->SetVideoClippingWindow(hWnd); // 設定 video 可以被切割
+		if(FAILED(hr)) 
+			DXShowError(hr);
+
+		// Step 1: 取得目前視窗的 dimension
+		WINDOWINFO wi;
+		GetWindowInfo(hWnd,&wi);
+		RECT rcWindow=wi.rcClient;
+		int left=0;
+		int top=0;
+		int Width=rcWindow.right-rcWindow.left+1;
+		int Height=rcWindow.bottom-rcWindow.top+1;
+
+		// Step 2: 設定 video 的顯示 dimension
+		RECT recDec;
+		recDec.left=0;
+		recDec.top=0;
+		recDec.right=rcWindow.right-rcWindow.left+1;
+		recDec.bottom=rcWindow.bottom-rcWindow.top+1;
+		hr=pWC->SetVideoPosition(NULL,&recDec);
+		if(FAILED(hr)) 
+			DXShowError(hr);
+			
+		// Step 3: 指定顯示比例 (目前設定為不強制長寬比)
+		//         (執行的程式必須要在 XP 以上的作業系統才能執行)
+		pWC->SetAspectRatioMode(VMR9ARMode_None);
+	}
+	// ========================== end of 關鍵片段 ==========================
+	
+	// Step 5: 利用 intelligent connection 的方式, 
+	//         直接把影像輸出到 VideoRender Filter 
+	//         若你有裝 ffDShow, 則會連接 ffDShow 到  Video Render
+	hr =ConnectFilters(pBuilder,GetOutPin(pSource,0),m_pVR);
+	if(FAILED(hr))
+		return hr;
+	}
+	
+}

@@ -1,0 +1,1 @@
+del /S *.obj,*.pch,*.pdb,*.idb,*.ncb,BuildLog.*,*.ilk,*.suo,*.class

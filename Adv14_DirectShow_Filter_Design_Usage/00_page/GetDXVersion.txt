@@ -1,0 +1,75 @@
+﻿Compiler Setting
+
+Step 1 : Copy the source code getdxver.cpp into your project path. You can find the file under your DirectX SDK root folder at Samples\Multimedia\DXMisc\GetDXVer.
+
+Step 2:  Put the getdxver.cpp in your project.
+
+Step 3: Add two libraries Version.lib dxguid.lib in the linking setting.
+
+
+How to use ?
+
+      ----------------------------------  code -----------------------------
+// 宣告 GetDXVersion method, 取得 DirectX 安裝版本 
+
+extern HRESULT GetDXVersion( DWORD* pdwDirectXVersion,TCHAR* strDirectXVersion,int cchDirectXVersion );
+
+ 
+
+// 取得使用者安裝的 DirectX 版本 (關鍵片段) 
+    DWORD dwDirectXVersion; // 回傳的版本號碼: 參考附錄 
+    TCHAR strDirectXVersion[10]; // 回傳的版本字串 
+    HRESULT hr =GetDXVersion(&dwDirectXVersion, strDirectXVersion,10); 
+// 後面是顯示的部分   
+
+TCHAR strResult[128]; 
+    if( SUCCEEDED(hr) )    { 
+        if( dwDirectXVersion > 0 ) 
+            StringCchPrintf( strResult, 128, TEXT("DirectX %s installed"),
+
+                                              strDirectXVersion ); 
+        else 
+            StringCchCopy( strResult, 128, TEXT("DirectX not installed") ); 
+    } 
+    else    { 
+        StringCchPrintf( strResult, 128, TEXT("Unknown version 
+
+                                                                         of DirectX installed") ); 
+    } 
+    MessageBox( NULL, strResult, TEXT("DirectX Version:"), 
+
+                                  MB_OK | MB_ICONINFORMATION );
+
+---------------------------------- end of code -----------------------------
+
+附錄:
+
+//              0x00000000 = No DirectX installed 
+//              0x00010000 = DirectX 1.0 installed 
+//              0x00020000 = DirectX 2.0 installed 
+//              0x00030000 = DirectX 3.0 installed 
+//              0x00030001 = DirectX 3.0a installed 
+//              0x00050000 = DirectX 5.0 installed 
+//              0x00060000 = DirectX 6.0 installed 
+//              0x00060100 = DirectX 6.1 installed 
+//              0x00060101 = DirectX 6.1a installed 
+//              0x00070000 = DirectX 7.0 installed 
+//              0x00070001 = DirectX 7.0a installed 
+//              0x00080000 = DirectX 8.0 installed 
+//              0x00080100 = DirectX 8.1 installed 
+//              0x00080101 = DirectX 8.1a installed 
+//              0x00080102 = DirectX 8.1b installed 
+//              0x00080200 = DirectX 8.2 installed 
+//              0x00090000 = DirectX 9.0 installed
+
+ 
+
+ 
+
+by Jing.
+
+ 
+
+Reference
+
+[1] http://msdn.microsoft.com/archive/en-us/directx9_c_Summer_04/directx/directxsdk/tools/versioncheck.asp?frame=true

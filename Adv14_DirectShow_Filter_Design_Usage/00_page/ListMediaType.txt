@@ -1,0 +1,34 @@
+﻿// DirectShow
+// 取得任何 Pin 第一個 MediaType 的範例
+//                                                                                井民全
+    BOOL bShowMessage=true;
+	// Step 1: 取得任意 Filter 的輸出 Pin
+	IPin *SourceOutPin=GetOutPin(pSource,0);
+	
+	// Step 2: 取出該 Pin 的列舉器 (因為目標 Pin 可能支援多個 Media Type 以供後面的 Filter 連線)
+    // 對應 Filter Design
+	//    如果你的 Pin 只有支援一個 MediaType, 那麼請 override CSourceStream:: virtual HRESULT GetMediaType(CMediaType *pMediaType)
+    //    若你的 Pin 支援多個 MediaType, 則要 Override 兩個 method
+    /*
+         virtual HRESULT CheckMediaType(const CMediaType *pMediaType);
+         virtual HRESULT GetMediaType(int iPosition, CMediaType *pMediaType);  // List pos. 0-n
+    */
+	CComPtr<IEnumMediaTypes> emt;
+	hr =SourceOutPin->EnumMediaTypes(&emt);
+	if(FAILED(hr)){
+	     if(bShowMessage) MessageBox(NULL,_T("列舉 source 輸出 pin 失敗::CreateFilter_VMR"),_T("error"),MB_OK);
+             return hr;
+	}
+
+    // Step 3: 取出第一個支援的 Media Type (關鍵片段)
+	AM_MEDIA_TYPE *pmt; 
+	hr = emt->Next(1,&pmt,NULL); // 取出第一個
+	if(FAILED(hr)){
+		if(bShowMessage) MessageBox(NULL,_T("輸出 pin 取得 Media Type 失敗::CreateFilter_VMR"),_T("error"),MB_OK);
+        return hr;
+	}
+
+    // 接下來, 你就可以連接 Filter 了
+    hr =ConnectDirectFilters(pBuilder,SourceOutPin,m_pVideoDeocder,pmt);
+
+by Jing

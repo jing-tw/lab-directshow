@@ -1,0 +1,287 @@
+// ==================================  畫圖主程式   ========================
+HFONT g_hFont; // 目前的字型
+COLORREF g_rgbColors=RGB(240,240,240); // 文字的顏色
+COLORREF g_rgbBGColors=RGB(0,0,0); // 背景顏色
+LONG   g_nImageWidth; // 建立的文字圖片寬度
+float g_fBitmapCompWidth; //目前圖片寬度與實際影像寬度的比例
+
+const float X_EDGE_BUFFER=0.05f; // Pixel buffer between bitmap and window edge
+                                 // (represented in composition space [0 - 1.0f])
+const float Y_EDGE_BUFFER=0.05f;
+#define TRANSPARENCY_VALUE   (1.0f)
+
+
+// hwndApp: 要放文字的 window (因為要建立 device context compatible bmp)
+HRESULT BlendText(HWND hwndApp, TCHAR *szNewText,IVMRMixerBitmap9 *pBMP){
+    LONG cx, cy; // 影像的寬高資訊
+    HRESULT hr;
+
+    //  取得目前原始播放影像的寬高資訊
+    hr = pWC->GetNativeVideoSize(&cx, &cy, NULL, NULL);
+    if (FAILED(hr)) {
+        Msg(TEXT("GetNativeVideoSize FAILED!  hr=0x%x\r\n"), hr);
+        return hr;
+    }
+
+    // 建立一個與目前視窗相容的 HDC hdcBmp (等一下要給 [文字 bmp] 使用)
+    HDC hdc = GetDC(hwndApp);
+    HDC hdcBmp = CreateCompatibleDC(hdc); // our new HDC
+
+	// 建立使用者指定的字型
+	LOGFONT lf;
+	memset(&lf, 0, sizeof(LOGFONT)); 
+	lf.lfHeight = 24; //  要求使用 12-pixel-height 的字型
+	_tcscpy_s(lf.lfFaceName, LF_FACESIZE, _T("Arial")); // 要求使用 Arial 
+	CFont font1;
+    font1.CreateFontIndirect(&lf);  // 實際建立新的字型
+
+
+    // 設定目前我們自己的 DC 目標為 [預設字型], 接著才能取出字型相關資訊
+    // HFONT hOldFont = (HFONT) SelectObject(hdcBmp, g_hFont);
+	 HFONT hOldFont = (HFONT) SelectObject(hdcBmp, font1);
+
+	// 取得字串的長度, 然後找出每個字元寬長的點數
+	// 這些資訊會被用來產生 bitmap 圖形
+    int nLength, nTextBmpWidth, nTextBmpHeight;
+    SIZE sz={0};
+    nLength = _tcslen(szNewText);
+    GetTextExtentPoint32(hdcBmp, szNewText, nLength, &sz); // 取得指定字串所佔的面積
+    nTextBmpHeight = sz.cy;
+    nTextBmpWidth  = sz.cx;
+
+    // 建立一個新的 bitmap 大小剛好是我們指定的字串
+    HBITMAP hbm = CreateCompatibleBitmap(hdc, nTextBmpWidth, nTextBmpHeight);
+    ReleaseDC(hwndApp, hdc); // 現在 hdc 已經不需要了, 先 Released 以免忘記!
+
+    // 設定目前我們自己的 DC 目標為 [文字 Bitmap]
+    BITMAP bm; // our new bitmap
+    HBITMAP hbmOld; // old
+    GetObject(hbm, sizeof(bm), &bm); // 取得剛剛建立好的 bitmap hbm 資料 -> bm
+    hbmOld = (HBITMAP)SelectObject(hdcBmp, hbm); 
+
+    // 設定文字bmp基本資料: 範圍, 顏色, 背景 
+    RECT rcText;
+    SetRect(&rcText, 0, 0, nTextBmpWidth, nTextBmpHeight);
+    SetBkColor(hdcBmp, g_rgbBGColors); // 設定我們 hdcBmp 的背景為 g_rgbBGColors
+    SetTextColor(hdcBmp, g_rgbColors); // 設定 hdcBmp 上面的文字顏色為  g_rgbColors
+
+    // 把字串畫到 hdcBmp 上 
+    TextOut(hdcBmp, 0, 0, szNewText, nLength);
+
+    // 設定 VMR 的 bitmap 相關資訊
+    // VMRALPHABITMAP bmpInfo;  // 這是使用 VMR-7 的結構
+	VMR9AlphaBitmap bmpInfo; // 因為我們使用 IVMRMixerBitmap9, 所以在 SetAlphaBitmap 需要使用 VMR-9 的版本
+
+    ZeroMemory(&bmpInfo, sizeof(bmpInfo) );
+    bmpInfo.dwFlags = VMRBITMAP_HDC; // 設定等一下要顯示的時候, 是使用我們給的 Bitmap DC 上的 bitmap 畫圖. 
+    bmpInfo.hdc = hdcBmp;  // 指定我們的 Bitmap DC handle
+
+    // 紀錄目前的文字圖片寬度
+    g_nImageWidth = bm.bmWidth;
+
+	// 紀錄目前圖片寬度與實際影像寬度的比例
+    g_fBitmapCompWidth = (float)g_nImageWidth / (float)cx;
+
+	// 從 bitmap 的 右下角開始顯示
+    bmpInfo.rDest.left = 0.0f + X_EDGE_BUFFER;
+    bmpInfo.rDest.right = g_fBitmapCompWidth;// 1.0f - X_EDGE_BUFFER;
+    bmpInfo.rDest.top = (float)(cy - bm.bmHeight) / (float)cy - Y_EDGE_BUFFER;
+    bmpInfo.rDest.bottom = 1.0f - Y_EDGE_BUFFER;
+    bmpInfo.rSrc = rcText;
+
+    // Transparency value 1.0 is opaque, 0.0 is transparent.
+    bmpInfo.fAlpha =  TRANSPARENCY_VALUE;
+
+    // Set the COLORREF 使得 bitmap 的背景為透明 
+    bmpInfo.clrSrcKey = RGB(255, 255, 255);  // Pure white 為透明顏色
+    bmpInfo.dwFlags |= VMRBITMAP_SRCCOLORKEY; // 指定要求使用 source color key 進行繪圖
+
+    // 把 圖片直接畫到 VMR 所管理的影像畫面上
+    hr = pBMP->SetAlphaBitmap(&bmpInfo);
+    if (FAILED(hr))
+        Msg(TEXT("SetAlphaBitmap FAILED!  hr=0x%x\r\n\r\n")
+            TEXT("NOTE: Your display must be configured for 32-bit color depth\r\n")
+            TEXT("for this sample to display alpha-blended text."), hr);
+
+    // 回復原來的設定
+    DeleteObject(SelectObject(hdcBmp, hbmOld));
+    SelectObject(hdc, hOldFont);
+
+    // 歸還使用的資源
+    DeleteObject(hbm);
+    DeleteDC(hdcBmp);
+	font1.DeleteObject();  // 釋放字型資源
+    return hr;
+}
+
+
+HRESULT init_Graph_VMR(HWND hWnd,int frameHeight,int frameWidth,REFERENCE_TIME atpf){
+	// Step 1: 建立專門播放 eBell native stream 的 Graph Filter 
+	HRESULT hr;
+	mySource=new CMyPushSourceFilter2(NULL,&hr);
+	if(FAILED(hr)) 
+        DXShowError(hr);
+
+	// 建立 Filter Graph 之前, 先指定目前 video frame size 與 video frame rate
+	mySource->m_pPin->SetFrameData(frameHeight,frameWidth,atpf);
+
+	// Step 2: 建立 VMR filter grpah
+	hr=CreateFilter_VMR(mySource,&pFG,hWnd);
+	if(FAILED(hr)) 
+        DXShowError(hr);
+
+    hr = pFG->QueryInterface(IID_IMediaControl, (void **)&pMC);
+	if(FAILED(hr)){
+        return hr;
+	}
+
+    hr = pFG->QueryInterface(IID_IMediaEventEx, (void **)&pME);
+    if(FAILED(hr)){
+        pMC->Release();
+        return hr;
+	}
+
+	// 取得 IMediaSeeking 介面
+	hr=pFG->QueryInterface(IID_IMediaSeeking, (void **)&pMS);
+	if(FAILED(hr)){
+		pMC->Release();
+		pME->Release();
+		return hr;
+	}
+	
+	// 取得 IMediaEvent 介面
+    OAEVENT oEvent;
+    hr = pME->GetEventHandle(&oEvent);
+	if(FAILED(hr)){
+		pMC->Release();
+		pME->Release();
+		return hr;
+	}
+
+	// 取得 IVideoWindow 介面
+	// pFG->QueryInterface(IID_IVideoWindow, (void **)&pVidWin);
+
+	pMC->Stop();
+	return hr;
+}
+
+HRESULT CreateFilter_VMR(CComPtr<IBaseFilter> pSource,IFilterGraph **ppFG,HWND hWnd){
+	 
+	//  Step 2: Create filter graph 
+    HRESULT hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC,IID_IFilterGraph, (void**) ppFG);
+    if(FAILED(hr)) {
+        return hr;
+    }
+	
+    // Step 3: Get a GraphBuilder interface from the filter graph 
+	IGraphBuilder *pBuilder;
+    hr = (*ppFG)->QueryInterface(IID_IGraphBuilder, (void **)&pBuilder);
+    if(FAILED(hr))
+    {
+        return hr;
+    }
+
+	// CComPtr<IBaseFilter> pSource=mySource;
+	hr=pBuilder->AddFilter(pSource,_T("MyPushSourceFilter2"));
+	if(FAILED(hr)) {
+        return hr;
+    }
+		
+	// Step 4: 取得 video Render
+	// CComPtr<IBaseFilter> m_pVR; // Default Video Render
+	//hr =AddFilterByCLSID(pBuilder, CLSID_VideoRenderer, _T("Video Render"), &m_pVR); // Default Render
+	hr=AddFilterByCLSID(pBuilder,CLSID_VideoMixingRenderer9,_T("Video Render"),&m_pVR);// 加入 VMR9 介面
+	if(FAILED(hr)){
+        return hr;
+    }
+
+	
+	hr = m_pVR->QueryInterface(IID_IVMRFilterConfig9, (LPVOID *)&pConfig);
+	// CComQIPtr<IVMRFilterConfig9> pConfig(m_pVR);
+	hr=pConfig->SetRenderingMode(VMR9Mode_Windowless);
+	if(FAILED(hr)) 
+        DXShowError(hr);
+
+	// CComQIPtr<IVMRWindowlessControl9> pWC(m_pVR);
+	hr = m_pVR->QueryInterface(IID_IVMRWindowlessControl9, (LPVOID *)&pWC);
+	if(FAILED(hr)) 
+		DXShowError(hr);
+	hr=pWC->SetVideoClippingWindow(hWnd);
+	if(FAILED(hr)) 
+		DXShowError(hr);
+
+	// Request point filtering (instead of bilinear filtering)
+    // to improve the text quality.  In general, if you are 
+    // not scaling the app Image, you should use point filtering.
+    // This is very important if you are doing source color keying.
+	
+	IVMRMixerControl9 *pMix;
+	hr = m_pVR->QueryInterface(IID_IVMRMixerControl9, (void**)&pMix);
+	if( SUCCEEDED(hr)) 
+	{
+		DWORD dwPrefs=0;
+		hr = pMix->GetMixingPrefs(&dwPrefs);
+
+		if (SUCCEEDED(hr))
+		{
+			dwPrefs |= MixerPref_PointFiltering;
+			dwPrefs &= ~(MixerPref_BiLinearFiltering);
+
+			hr = pMix->SetMixingPrefs(dwPrefs);
+		}
+		pMix->Release();
+	}
+
+	// Get alpha-blended bitmap interface
+	hr = m_pVR->QueryInterface(IID_IVMRMixerBitmap9, (void**)&pBMP);
+
+
+	if(hWnd !=0){
+		// 取得視窗的 dimension
+		WINDOWINFO wi;
+		GetWindowInfo(hWnd,&wi);
+		RECT rcWindow=wi.rcClient;
+		int left=0;
+		int top=0;
+		int Width=rcWindow.right-rcWindow.left+1;
+		int Height=rcWindow.bottom-rcWindow.top+1;
+		
+		RECT recDec;
+		recDec.left=0;
+		recDec.top=0;
+		recDec.right=rcWindow.right-rcWindow.left+1;
+		recDec.bottom=rcWindow.bottom-rcWindow.top+1;
+		hr=pWC->SetVideoPosition(NULL,&recDec);
+		if(FAILED(hr)) 
+			DXShowError(hr);
+	}
+/*
+	// Step 5: 利用 intelligent connection 的方式, 直接把影像輸出到 VideoRender Filter 
+	// 連接 ffDShow 到  Video Render
+	hr =ConnectFilters(pBuilder,GetOutPin(pSource,0),m_pVR);
+	if(FAILED(hr)){
+        return hr;
+    }
+*/
+	// 指定要求使用 XviD 解碼
+	// Step 5: 取出 xvid.ax  
+	CComPtr<IBaseFilter> m_pVideoDeocder; // xvid Video Ddecoder
+	hr =AddFilterByCLSID(pBuilder, CLSID_XVID, _T("XVID"), &m_pVideoDeocder); // Default Render
+	if(FAILED(hr)){
+        return hr;
+    }
+
+	// Step 6: 連接 source 到  xvid
+	hr =ConnectFilters(pBuilder,GetOutPin(pSource,0),m_pVideoDeocder);
+	if(FAILED(hr)){
+        return hr;
+    }
+
+	// Step 7: 連接 xvid 到 Video Render
+	hr =ConnectFilters(pBuilder,GetOutPin(m_pVideoDeocder,0),m_pVR);
+	if(FAILED(hr)){
+        return hr;
+    }
+	
+
+}

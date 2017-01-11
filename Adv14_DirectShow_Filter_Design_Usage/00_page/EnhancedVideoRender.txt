@@ -1,0 +1,108 @@
+﻿// 這段程式展示如何建立與操作 Enhanced Video Render
+//                                                     井民全
+
+#include <evr.h>
+
+HRESULT CRenderObject::CreateFilter_EVR(CComPtr<IBaseFilter> pSource,IFilterGraph **ppFG,HWND hWnd){
+	MessageBox(NULL,_T("目前使用 Enhanced Video Render, 進行串流播放"), _T("Info"),MB_OK);
+	m_VMRVersion=10;
+
+	HRESULT hr=S_FALSE;
+	
+	// Initialize COM
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
+
+	// Create filter graph 
+	hr = CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC,IID_IFilterGraph, (void**) ppFG);
+	if(FAILED(hr)) {
+		return hr;
+	}
+
+	// Get a GraphBuilder interface from the filter graph 
+	IGraphBuilder *pBuilder;
+	hr = (*ppFG)->QueryInterface(IID_IGraphBuilder, (void **)&pBuilder);
+	if(FAILED(hr)){
+		return hr;
+	}
+
+	// Step 1: 建立 Enhanced Video Render
+	IBaseFilter *pRender=NULL;
+	hr=AddFilterByCLSID(pBuilder,CLSID_EnhancedVideoRenderer,_T("Enhanced Video Render"),&pRender);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("EVR fail"),_T("info"),MB_OK);
+		return hr;
+	}
+
+	// Step 2: 設定顯示方式
+	//   a. 取得 GetService 工具物件
+	CComPtr<IMFGetService> pGetService = NULL;// include mfidl.h
+	 
+	hr = pRender->QueryInterface(__uuidof(IMFGetService), (void**)&pGetService);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("IMFGetService fail"),_T("info"),MB_OK);
+		return hr;
+	}
+	//   b. 利用工具物件取得 Video Display Control
+	CComPtr<IMFVideoDisplayControl> m_pVDC=NULL;   // include evr.h
+	hr=pGetService->GetService(MR_VIDEO_RENDER_SERVICE,__uuidof(IMFVideoDisplayControl),(void**)&m_pVDC);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("GetService fail::The object does not support the service."),_T("info"),MB_OK);
+		return hr;
+	}
+	//    c.  指定顯示的視窗
+	hr=m_pVDC->SetVideoWindow(hWnd);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("SetVideoWindow fail::EVR"),_T("info"),MB_OK);
+		return hr;
+	}
+
+	//     d. 指定串流顯示模式
+	hr=m_pVDC->SetAspectRatioMode(MFVideoARMode_None);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("SetAspectRatioMode fail::EVR"),_T("info"),MB_OK);
+		return hr;
+	}
+
+	// DirectShow 基礎建設相關
+	// 建立 Source Filter
+	hr=pBuilder->AddFilter(pSource,_T("MyPushSourceFilter2"));
+	if(FAILED(hr)) {
+		return hr;
+	}
+	// 取出 xvid.ax
+	CComPtr<IBaseFilter> m_pVideoDeocder; // xvid Video Ddecoder
+	hr =AddFilterByCLSID(pBuilder, CLSID_XVID, _T("XVID"), &m_pVideoDeocder); // Default Render
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("取出 xvid.ax error"),_T("info"),MB_OK);
+		::ShellExecute(NULL,_T("open"),_T("regsvr32.exe   "),_T("c:\\eBell\\xvid.ax"),NULL,SW_HIDE);   //SW_SHOW
+        hr =AddFilterByCLSID(pBuilder, CLSID_XVID, _T("XVID"), &m_pVideoDeocder); // Default Render
+		if(FAILED(hr)){
+			return hr;
+		}else{
+			MessageBox(NULL,_T("C++ 內部註冊成功"),_T("info"),MB_OK);
+		}
+    }
+	// 連接 source 到  xvid
+	hr =ConnectFilters(pBuilder,GetOutPin(pSource,0),m_pVideoDeocder);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("連接 source 到  xvid error"),_T("info"),MB_OK);
+        return hr;
+    }
+	// 連接 xvid 到 Video Render
+	hr =ConnectFilters(pBuilder,GetOutPin(m_pVideoDeocder,0),m_pVR);
+	if(FAILED(hr)){
+		MessageBox(NULL,_T("連接 xvid 到 Video Render error"),_T("info"),MB_OK);
+        return hr;
+    }	
+	// TRACE(_T("List all filters in pBuilder\n"));
+	PrintAllFilter(pBuilder);
+	
+	// 9
+	//int count=m_pVR->Release();
+
+	// 用完 pBuilder 釋放它, 以免忘記
+	pBuilder->Release();
+
+	return hr;
+}

@@ -1,0 +1,18 @@
+﻿// 如何取得視訊卡記憶體大小的程式
+//                                                     井民全
+
+// 取得 video memory
+	IDirectDraw* pdd=0; 
+	DDCAPS ddcHardwareCaps; 
+	DDCAPS ddcEmulatedCaps; 
+
+	hr=DirectDrawCreate(NULL,&pdd,NULL);
+	ddcHardwareCaps.dwSize=sizeof(DDCAPS);
+	ddcEmulatedCaps.dwSize=sizeof(DDCAPS);
+	hr=pdd->GetCaps(&ddcHardwareCaps,&ddcEmulatedCaps);
+	if(hr==DD_OK){
+		CString strmsg;
+		strmsg.Format(_T("Your video memory size =%d"),ddcHardwareCaps.dwVidMemTotal);
+		MessageBox(NULL,strmsg.GetBuffer(),_T("Info"),MB_OK);
+	}
+	pdd->Release();

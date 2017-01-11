@@ -1,0 +1,65 @@
+﻿// DirectX 簡單教學 -- 井民全
+// 如何讓 Pin 得知目前的 reference clock
+
+
+// 操作方面
+// ---------------------------------------------------------
+	IReferenceClock *pClock;
+	this->GetMySyncSource(&pClock);
+	if(pClock==NULL){
+            // 若目前 Graphic 要求全速執行, 自己調整解碼速率
+        }else{
+            // 目前 Graphic 使用 System clock 執行
+        }
+// ---------------------------------------------------------
+
+//  實作方面
+
+// Step 1: override filter 的 SetSyncSource method
+class MyFilter: public CSource{
+	MyPushPin *m_pPin;
+
+public: 
+	STDMETHODIMP SetSyncSource(IReferenceClock *pClock);
+		
+};
+
+STDMETHODIMP  MyFilter::SetSyncSource(IReferenceClock *pClock){
+	CSource::SetSyncSource(pClock);
+        
+        // 設定的程式在這裡
+        m_pPin->SetMySyncSource(pClock);  // 設定目前正在使用的 reference clock 給 Pin
+
+	return NOERROR;
+}
+
+
+// Step 2: 把 SetMySyncSource 放在 Pin 裡面
+class MyPushPin : public CSourceStream{
+	IReferenceClock *m_pClock;
+public:
+	MyPushPin();
+
+	// reference clock 設定讀取相關
+	STDMETHODIMP SetMySyncSource(IReferenceClock *pClock); // 設定目前的 reference clock
+	STDMETHODIMP GetMySyncSource(IReferenceClock **ppClock);// 讀取自己的 reference clock
+};
+
+
+CMyPushPin2::MyPushPin(HRESULT *phr, CSource *pFilter):CSourceStream(NAME("My Push Source"), phr, pFilter, L"Out"){
+	m_pClock=NULL;// 給定 Pin reference clock 初值
+}
+
+// 設定自己的 reference clock
+STDMETHODIMP CMyPushPin2::SetMySyncSource(IReferenceClock *pClock){
+	CAutoLock cAutoLock(m_pFilter->pStateLock()); // 鎖住目前 Filter 的狀態, 不能更改
+	m_pClock=pClock;
+	return NOERROR; 
+}
+
+// 讀取自己的 reference clock
+STDMETHODIMP CMyPushPin2::GetMySyncSource(IReferenceClock **ppClock){
+	CAutoLock cAutoLock(m_pFilter->pStateLock()); // 鎖住目前 Filter 的狀態, 不能更改
+	*ppClock=m_pClock;
+	return NOERROR;
+}

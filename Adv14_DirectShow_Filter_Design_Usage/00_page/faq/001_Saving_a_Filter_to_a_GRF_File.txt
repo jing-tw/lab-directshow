@@ -1,0 +1,63 @@
+// saves a GraphEdit-viewable copy of the filter graph
+// Usage:
+/*
+HRESULT hr;
+	CComPtr<IBaseFilter> pSource,pCodec,pRender;  // 因為會傳回自動 match 的 filter, 所以使用 parent interface
+	CComPtr<IGraphBuilder> pBuilder;
+
+	hr = pGraph->QueryInterface(IID_IGraphBuilder, (void **)&pBuilder);
+	if(FAILED(hr)){
+		printf("ERROR - Can not find IID_IGraphBuilder ::build_graph");
+		DXShowError(hr);
+        return hr;
+	}
+	
+
+	hr=pBuilder->RenderFile(strfullFilename,NULL);
+	if (FAILED(hr)) {
+		printf("ERROR - Could not create the Filter CLSID_AsyncReader::build_graph");
+		DXShowError(hr);
+        return hr;
+    	}
+	// 關鍵使用方式
+	SaveGraphFile(pBuilder,_T("demo.grf"));
+	PrintAllFilter(0,pBuilder); // 查閱目前連接的 filter . ps: 打開會跳回 Window Mode (一定要在 set_fullscreen 之前)
+*/
+
+HRESULT SaveGraphFile(IGraphBuilder *pGraph, WCHAR *wszPath){
+    const WCHAR wszStreamName[] = L"ActiveMovieGraph"; 
+    HRESULT hr;
+    
+    IStorage *pStorage = NULL;
+    hr = StgCreateDocfile(
+        wszPath,
+        STGM_CREATE | STGM_TRANSACTED | STGM_READWRITE | STGM_SHARE_EXCLUSIVE,
+        0, &pStorage);
+    if(FAILED(hr)) 
+    {
+        return hr;
+    }
+
+    IStream *pStream;
+    hr = pStorage->CreateStream(
+        wszStreamName,
+        STGM_WRITE | STGM_CREATE | STGM_SHARE_EXCLUSIVE,
+        0, 0, &pStream);
+    if (FAILED(hr)) 
+    {
+        pStorage->Release();    
+        return hr;
+    }
+
+    IPersistStream *pPersist = NULL;
+    pGraph->QueryInterface(IID_IPersistStream, (void**)&pPersist);
+    hr = pPersist->Save(pStream, TRUE);
+    pStream->Release();
+    pPersist->Release();
+    if (SUCCEEDED(hr)) 
+    {
+        hr = pStorage->Commit(STGC_DEFAULT);
+    }
+    pStorage->Release();
+    return hr;
+}

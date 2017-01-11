@@ -1,0 +1,42 @@
+﻿// 這個範例用來展示
+//                如何為你的 Dialog 加上 Icon
+// by Jing (井民全) 
+
+// Step 1: 加入 Icon 成員
+class xxx: public CDialog{
+   HICON m_hIcon;
+};
+
+// Step 2: 載入 Icon
+xxx::xxx(CWnd* pParent /*=NULL*/): CDialog(xxx::IDD, pParent){
+	 
+	 m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
+}
+
+// Step 3: 設定這個 Dialog 的 Icon 為 m_Icon
+BOOL xxx::OnInitDialog(){
+	SetIcon(m_hIcon, TRUE); // 關鍵片段
+}
+
+// Step 4: [使用者體驗] 
+void xxx::OnPaint(){
+	// 當視窗縮小時, 會自動重新劃上小 Icon
+	// 這將會提醒使用者應用程式所在工作列的位置
+	if (IsIconic()){
+		CPaintDC dc(this); // device context for painting
+		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+		// Center icon in client rectangle
+		int cxIcon = GetSystemMetrics(SM_CXICON);
+		int cyIcon = GetSystemMetrics(SM_CYICON);
+		CRect rect;
+		GetClientRect(&rect);
+		int x = (rect.Width() - cxIcon + 1) / 2;
+		int y = (rect.Height() - cyIcon + 1) / 2;
+
+		// Draw the icon
+		dc.DrawIcon(x, y, m_hIcon);
+	}
+	else	{
+		CDialog::OnPaint();
+	}
+}

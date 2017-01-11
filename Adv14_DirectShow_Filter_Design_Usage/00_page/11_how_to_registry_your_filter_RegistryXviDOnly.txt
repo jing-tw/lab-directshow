@@ -1,0 +1,40 @@
+﻿// 這個範例用來展示
+//                如何自動註冊 XviD Codec 進行 MPEG-4 Elementary 視迅串流的解碼
+// by Jing (井民全) 
+
+
+void exe(CString RunCommand); // 執行指令
+
+
+// 初始化 XviD Codec
+void init_Codec(){
+	// Step 1: 取得目前預設目錄
+	int Length=GetCurrentDirectory(0,NULL);
+	TCHAR *Temp=new TCHAR[Length];
+	GetCurrentDirectory(Length,Temp);
+	gCurrentExecutionFilePath=Temp;
+	delete[] Temp;
+
+	// Step 2: 註冊 XviD codec: regsvr32.exe /s xvid.ax
+	CString strCommand=_T("regsvr32.exe /s "); // 註冊指令
+	strCommand.Append(gCurrentExecutionFilePath+_T("\\xvid.ax")); // 組合 XviD.ax 所在位置
+	exe(strCommand.GetBuffer());
+
+	// Step 3: 設定 XviD 參數: regedit.exe /s xvid.reg
+	strCommand=_T("regedit.exe  "); // 登記指令
+	strCommand.Append(gCurrentExecutionFilePath+_T("\\xvid.reg")); // 組合 XviD.reg 所在位置
+	exe(strCommand.GetBuffer());
+}
+
+// 執行任意 Process 公用程式
+void exe(CString RunCommand){
+	PROCESS_INFORMATION pi;
+			STARTUPINFO si;
+
+	memset(&si,0,sizeof(si));
+	si.cb= sizeof(si);
+
+	if(!CreateProcess(NULL,RunCommand.GetBuffer(), NULL, NULL, false, 0, NULL,NULL,&si,&pi)) {
+		MessageBox(NULL,_T("開啟執行檔發生問題"),_T("CreateProcess Error"),MB_OK);
+	}
+}
